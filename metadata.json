@@ -1,0 +1,10 @@
+{
+  "name": "Udodiri Young Social Club (Akpoha)",
+  "short_name": "UYSC Akpoha",
+  "description": "Premium Digital Portal for the Udodiri Young Social Club, Akpoha Chapter. Secure Gmail Auth, Financials, and Member Directory.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "theme_color": "#08090d",
+  "background_color": "#08090d"
+}
