@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense } from 'react';
+import { supabase } from './supabaseClient';
 import { Screen, User } from './types';
 import Login from './screens/Login';
 import Dashboard from './screens/Dashboard';
@@ -14,31 +15,74 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAppLoading, setIsAppLoading] = useState(true);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('uysc_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      setCurrentScreen(Screen.DASHBOARD);
+  async function getProfile(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Error fetching profile:', error);
+      }
+      return data;
+    } catch (error) {
+      console.warn('Unexpected error fetching profile:', error);
+      return null;
     }
-    // Artificial delay for initial boot feel
-    const timer = setTimeout(() => setIsAppLoading(false), 800);
-    return () => clearTimeout(timer);
+  }
+
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        initUser(session.user);
+      } else {
+        setIsAppLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        initUser(session.user);
+      } else {
+        setUser(null);
+        setCurrentScreen(Screen.LOGIN);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = (googleUser: User) => {
-    setIsAppLoading(true);
-    setTimeout(() => {
-      setUser(googleUser);
-      localStorage.setItem('uysc_user', JSON.stringify(googleUser));
-      setCurrentScreen(Screen.DASHBOARD);
-      setIsAppLoading(false);
-    }, 1000);
+  const initUser = async (supabaseUser: any) => {
+    const profile = await getProfile(supabaseUser.id);
+
+    // Default fallback values if metadata is missing or profile not found
+    const appUser: User = {
+      id: supabaseUser.id,
+      name: profile?.full_name || supabaseUser.user_metadata?.full_name || supabaseUser.email || 'Member',
+      email: supabaseUser.email || '',
+      role: profile?.role || 'Member',
+      level: profile?.level || 'Level 1',
+      photo: profile?.avatar_url || supabaseUser.user_metadata?.avatar_url || 'https://i.postimg.cc/bJQgWxd8/udodiri-young-social-club.jpg'
+    };
+
+    setUser(appUser);
+    setCurrentScreen(Screen.DASHBOARD);
+    setIsAppLoading(false);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('uysc_user');
-    setCurrentScreen(Screen.LOGIN);
+  const handleLogin = (googleUser: User) => {
+    // Legacy handler, kept for interface compatibility if needed, 
+    // but actual login is handled by Supabase auth listener
+    console.log('Login triggered', googleUser);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    // State update handled by onAuthStateChange
   };
 
   const renderScreen = () => {
@@ -79,12 +123,12 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark overflow-x-hidden">
       {currentScreen !== Screen.LOGIN && (
-        <Header 
-          user={user} 
-          onOpenEcosystem={() => setCurrentScreen(Screen.ECOSYSTEM)} 
+        <Header
+          user={user}
+          onOpenEcosystem={() => setCurrentScreen(Screen.ECOSYSTEM)}
         />
       )}
-      
+
       <main className="flex-grow pb-safe relative">
         <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading Section...</div>}>
           {renderScreen()}
@@ -92,9 +136,9 @@ const App: React.FC = () => {
       </main>
 
       {currentScreen !== Screen.LOGIN && currentScreen !== Screen.MEMBERSHIP_CARD && currentScreen !== Screen.ECOSYSTEM && (
-        <BottomNav 
-          currentScreen={currentScreen} 
-          onNavigate={setCurrentScreen} 
+        <BottomNav
+          currentScreen={currentScreen}
+          onNavigate={setCurrentScreen}
         />
       )}
     </div>
