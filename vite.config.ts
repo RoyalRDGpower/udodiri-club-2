@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
       'process.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
       'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY)
     },
+    base: process.env.VITE_BASE_PATH || '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
