@@ -103,6 +103,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
           </form>
         </div>
+        <div className="mt-6 text-center">
+          <a
+            href="/udodiri-club-2/presentation.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline text-sm font-medium"
+          >
+            View Project Proposal (PDF/Print)
+          </a>
+        </div>
       </div>
     </div>
   );
